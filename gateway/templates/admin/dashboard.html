@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Gestion — {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Gestion de la boutique</h1>
+{% include "admin/_nav.html" %}
+{% if stats is none or products is none or users is none %}
+<div class="tape" role="status"><strong>Certaines données manquent.</strong>
+  Un service ne répond pas ; les chiffres concernés sont remplacés par un tiret. <a href="/etat">Voir l'état des services</a></div>
+{% endif %}
+<div class="figures">
+  <div class="figure"><b>{{ stats.revenue|money if stats else '—' }}</b>Ventes hors annulations</div>
+  <div class="figure"><b>{{ stats.orders if stats else '—' }}</b>Commandes</div>
+  <div class="figure"><b>{{ stats.by_status.get('confirmed', 0) if stats else '—' }}</b>À expédier</div>
+  <div class="figure"><b>{{ products|length if products is not none else '—' }}</b>Produits</div>
+  <div class="figure"><b>{{ users|length if users is not none else '—' }}</b>Comptes</div>
+</div>
+<div class="split">
+  <section class="panel">
+    <div class="head"><h2>Commandes à expédier</h2><a href="/admin/commandes?statut=confirmed">Tout voir</a></div>
+    {% if to_ship is none %}<p class="muted">Le service des commandes ne répond pas.</p>
+    {% elif not to_ship %}<p class="muted">Rien à expédier pour le moment.</p>
+    {% else %}
+    <ul class="list">
+      {% for o in to_ship[:6] %}
+      <li><a href="/commandes/{{ o.id }}"><strong>n° {{ o.id }}</strong></a> pour {{ o.shipping_name }}, {{ o.shipping_city }}
+        <span class="muted small nowrap">{{ o.created_at|when('%d/%m à %H:%M') }}</span> <strong class="nowrap">{{ o.total|money }}</strong></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+  <section class="panel">
+    <div class="head"><h2>Stock bas</h2><a href="/admin/produits">Produits</a></div>
+    {% if products is none %}<p class="muted">Le catalogue ne répond pas.</p>
+    {% elif not low_stock %}<p class="muted">Aucun produit sous le seuil de 3 unités.</p>
+    {% else %}
+    <ul class="list">
+      {% for p in low_stock[:8] %}
+      <li><a href="/admin/produits/{{ p.id }}">{{ p.name }}</a> <span class="{{ 'sold-out' if p.stock < 1 else 'low' }}">{{ 'épuisé' if p.stock < 1 else 'reste ' ~ p.stock }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+</div>
+{% if stats and stats.pending_messages %}<p class="small muted" style="margin-top:1rem">{{ stats.pending_messages }} message(s) en attente d'envoi vers un service qui ne répondait pas ; ils partiront automatiquement.</p>{% endif %}
+{% endblock %}

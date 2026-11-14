@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier' if product_id else 'Ajouter' }} un produit — Gestion{% endblock %}
+{% block content %}
+<p class="small"><a href="/admin/produits">Produits</a></p>
+<h1>{{ 'Modifier le produit' if product_id else 'Ajouter un produit' }}</h1>
+{% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
+<form class="panel" method="post" action="/admin/produits/{{ product_id if product_id else 'nouveau' }}" style="max-width:44rem">
+  <div class="field">
+    <label for="name">Nom</label>
+    <input id="name" type="text" name="name" value="{{ product.name or '' }}" minlength="2" maxlength="120" required>
+  </div>
+  <div class="field">
+    <label for="description">Description</label>
+    <textarea id="description" name="description" maxlength="2000">{{ product.description or '' }}</textarea>
+  </div>
+  <div class="fields-2">
+    <div class="field">
+      <label for="price">Prix</label>
+      <input id="price" type="number" name="price" value="{{ product.price if product.price is not none and product.price >= 0 else '' }}" min="0" step="0.01" required>
+    </div>
+    <div class="field">
+      <label for="stock">Stock</label>
+      <input id="stock" type="number" name="stock" value="{{ product.stock if product.stock is not none and product.stock >= 0 else 0 }}" min="0" step="1" required>
+    </div>
+  </div>
+  <div class="field">
+    <label for="category">Rayon</label>
+    <input id="category" type="text" name="category" value="{{ product.category or '' }}" maxlength="60" list="rayons">
+    <datalist id="rayons">{% for c in categories %}<option value="{{ c }}">{% endfor %}</datalist>
+  </div>
+  <div class="field">
+    <label for="image_url">Adresse de l'image <span class="hint">facultatif, commence par http ou https</span></label>
+    <input id="image_url" type="url" name="image_url" value="{{ product.image_url or '' }}" maxlength="500">
+  </div>
+  <div class="field">
+    <label class="check"><input type="checkbox" name="is_active" {{ 'checked' if product.is_active }}> En vente dans le catalogue</label>
+  </div>
+  <div class="actions">
+    <button class="btn" type="submit">Enregistrer le produit</button>
+    <a href="/admin/produits">Annuler</a>
+  </div>
+</form>
+{% endblock %}

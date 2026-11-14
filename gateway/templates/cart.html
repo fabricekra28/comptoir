@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Panier — {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Votre panier</h1>
+{% if not lines %}
+  <div class="empty">
+    <h2>Votre panier est vide</h2>
+    <p class="muted">Ajoutez un article depuis le catalogue pour commencer une commande.</p>
+    <a class="btn" href="/catalogue">Parcourir le catalogue</a>
+  </div>
+{% else %}
+  {% if catalog_down %}
+  <div class="tape" role="status"><strong>Le catalogue ne répond pas pour le moment.</strong>
+    Votre panier est conservé avec les prix relevés à l'ajout. Vous pourrez commander dès son retour.</div>
+  {% endif %}
+  <div class="split">
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Article</th><th class="num">Prix</th><th>Quantité</th><th class="num">Sous-total</th><th></th></tr></thead>
+        <tbody>
+          {% for l in lines %}
+          <tr>
+            <td><a href="/produits/{{ l.product_id }}"><strong>{{ l.name }}</strong></a>
+              {% if l.short %}<br><span class="sold-out small">{% if l.stock %}Il n'en reste que {{ l.stock }} : réduisez la quantité{% else %}Épuisé : retirez cet article{% endif %}</span>{% endif %}</td>
+            <td class="num">{{ l.unit_price|money }}</td>
+            <td>
+              <form class="actions" method="post" action="/panier/modifier" style="flex-wrap:nowrap">
+                <input type="hidden" name="product_id" value="{{ l.product_id }}">
+                <input class="qty" type="number" name="quantity" value="{{ l.quantity }}" min="1" max="99" aria-label="Quantité de {{ l.name }}">
+                <button class="btn ghost small" type="submit">Modifier</button>
+              </form>
+            </td>
+            <td class="num">{{ l.subtotal|money }}</td>
+            <td class="right">
+              <form method="post" action="/panier/supprimer">
+                <input type="hidden" name="product_id" value="{{ l.product_id }}">
+                <button class="btn danger small" type="submit" aria-label="Retirer {{ l.name }}">Retirer</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <aside class="panel">
+      <h2>Total</h2>
+      <p><span class="tag big">{{ total|money }}</span></p>
+      <p class="muted small">Livraison comprise. Vous payez à la réception du colis.</p>
+      <a class="btn {{ 'disabled' if blocked }}" href="/commander" {% if blocked %}aria-disabled="true" tabindex="-1"{% endif %}>Passer la commande</a>
+      {% if blocked and not catalog_down %}<p class="small sold-out" style="margin:.75rem 0 0">Corrigez les articles signalés pour commander.</p>{% endif %}
+    </aside>
+  </div>
+{% endif %}
+{% endblock %}

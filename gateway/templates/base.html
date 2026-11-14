@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="/">{{ app_name }}</a>
+    <form class="search" action="/catalogue" method="get" role="search">
+      <input type="search" name="q" value="{{ q or '' }}" placeholder="Chercher un article" aria-label="Chercher un article">
+      <button type="submit">Chercher</button>
+    </form>
+    <nav class="nav" aria-label="Navigation principale">
+      <a href="/catalogue" {% if path == '/catalogue' %}aria-current="page"{% endif %}>Catalogue</a>
+      {% if user %}
+        <a href="/panier" {% if path == '/panier' %}aria-current="page"{% endif %}>Panier{% if cart_count %}<span class="count">{{ cart_count }}</span>{% endif %}</a>
+        <a href="/commandes" {% if path.startswith('/commandes') %}aria-current="page"{% endif %}>Commandes</a>
+        <a href="/notifications" {% if path == '/notifications' %}aria-current="page"{% endif %}>Messages{% if unread %}<span class="count">{{ unread }}</span>{% endif %}</a>
+        {% if user.role == 'admin' %}<a href="/admin" {% if path.startswith('/admin') %}aria-current="page"{% endif %}>Gestion</a>{% endif %}
+        <a href="/compte" {% if path == '/compte' %}aria-current="page"{% endif %}>{{ user.name }}</a>
+        <form class="inline" method="post" action="/deconnexion"><button class="linklike" type="submit">Se déconnecter</button></form>
+      {% else %}
+        <a href="/connexion">Se connecter</a>
+        <a href="/inscription">Créer un compte</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+<main>
+  {% if flash %}<div class="flash {{ flash.level }}" role="status">{{ flash.message }}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+<footer>
+  <div>
+    <span>{{ app_name }}, la boutique où l'on paie à la livraison</span>
+    <a href="/etat">État des services</a>
+  </div>
+</footer>
+</body>
+</html>

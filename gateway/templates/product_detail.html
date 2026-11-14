@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} — {{ app_name }}{% endblock %}
+{% block content %}
+{% if stale %}
+<div class="tape" role="status"><strong>Catalogue en mode dégradé.</strong>
+  Fiche telle qu'elle était à {{ stale_at|clock }}. Prix et stock seront vérifiés à la commande.</div>
+{% endif %}
+<p class="small"><a href="/catalogue">Catalogue</a>{% if product.category %} / <a href="/catalogue?categorie={{ product.category|urlencode }}">{{ product.category }}</a>{% endif %}</p>
+<div class="detail">
+  <div class="tile tone-{{ product.tone }}">{% if product.image_url %}<img src="{{ product.image_url }}" alt="{{ product.name }}">{% else %}{{ product.initial }}{% endif %}</div>
+  <div>
+    <h1>{{ product.name }}</h1>
+    <p><span class="tag big">{{ product.price|money }}</span></p>
+    {% if product.description %}<p>{{ product.description }}</p>{% endif %}
+    {% if not product.is_active %}
+      <p class="sold-out">Cet article n'est plus en vente.</p>
+    {% elif product.stock < 1 %}
+      <p class="sold-out">Épuisé pour le moment.</p>
+    {% else %}
+      <p class="{{ 'low' if product.stock <= 3 else 'muted' }}">{% if product.stock <= 3 %}Plus que {{ product.stock }} en stock{% else %}En stock{% endif %}</p>
+      <form class="buy" method="post" action="/panier/ajouter">
+        <input type="hidden" name="product_id" value="{{ product.id }}">
+        <div>
+          <label for="quantity">Quantité</label>
+          <input class="qty" id="quantity" type="number" name="quantity" value="1" min="1" max="{{ [product.stock, 99]|min }}">
+        </div>
+        <button class="btn" type="submit">Ajouter au panier</button>
+      </form>
+      {% if not user %}<p class="small muted" style="margin-top:.75rem">Vous devrez vous connecter pour remplir votre panier.</p>{% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

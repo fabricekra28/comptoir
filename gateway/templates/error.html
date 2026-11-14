@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="empty">
+  <h1>{{ title }}</h1>
+  <p>{{ message }}</p>
+  <div class="actions" style="justify-content:center">
+    {% if show_status %}<a class="btn" href="{{ path }}">Réessayer</a><a class="btn ghost" href="/etat">Voir l'état des services</a>{% endif %}
+    <a class="btn ghost" href="/">Revenir à l'accueil</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Commandes — Gestion{% endblock %}
+{% block content %}
+<h1>Commandes</h1>
+{% include "admin/_nav.html" %}
+<ul class="aisles" style="margin:0 0 1.5rem" aria-label="Filtrer par état">
+  <li><a href="/admin/commandes" {% if not statut %}class="on"{% endif %}>Toutes</a></li>
+  {% for value, label in statuses.items() %}<li><a href="/admin/commandes?statut={{ value }}" {% if statut == value %}class="on"{% endif %}>{{ label }}s</a></li>{% endfor %}
+</ul>
+{% if not orders %}
+  <div class="empty"><h2>Aucune commande{{ ' dans cet état' if statut }}</h2></div>
+{% else %}
+<div class="panel table-wrap">
+  <table>
+    <thead><tr><th>Commande</th><th>Date</th><th>Client</th><th>Livraison</th><th>État</th><th class="num">Total</th><th></th></tr></thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td><a href="/commandes/{{ o.id }}"><strong>n° {{ o.id }}</strong></a></td>
+        <td class="nowrap small">{{ o.created_at|when('%d/%m/%Y %H:%M') }}</td>
+        <td>{{ o.user_name }}<br><span class="small muted">{{ o.user_email }}</span></td>
+        <td class="small">{{ o.shipping_city }}<br>{{ o.shipping_phone }}</td>
+        <td><span class="badge {{ o.status }}">{{ o.status|status }}</span></td>
+        <td class="num">{{ o.total|money }}</td>
+        <td class="right">
+          {% for value, label in next_status.get(o.status, []) %}
+          <form method="post" action="/admin/commandes/{{ o.id }}/statut">
+            <input type="hidden" name="status" value="{{ value }}">
+            <button class="btn small" type="submit">{{ label }}</button>
+          </form>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

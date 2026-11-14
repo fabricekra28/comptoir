@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}État des services — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>État des services</h1>
+  <span class="muted">Vérifié à {{ checked_at.strftime('%H:%M:%S') }} <a class="btn ghost small" href="/etat">Actualiser</a></span>
+</div>
+{% if all_up %}
+  <div class="flash ok">Tout fonctionne normalement.</div>
+{% else %}
+  <div class="tape" role="status"><strong>Un service au moins ne répond pas.</strong> Le reste de la boutique continue de fonctionner ; le détail est ci-dessous.</div>
+{% endif %}
+<div class="panel table-wrap">
+  <table>
+    <thead><tr><th>Service</th><th>État</th><th class="num">Réponse</th><th>En cas de panne</th></tr></thead>
+    <tbody>
+      {% for c in checks %}
+      <tr>
+        <td><strong>{{ c.label }}</strong></td>
+        <td><span class="badge {{ 'up' if c.up else 'down' }}">{{ 'En service' if c.up else 'En panne' }}</span></td>
+        <td class="num">{% if c.up %}{{ c.ms }} ms{% else %}—{% endif %}</td>
+        <td class="small">{{ c.impact }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

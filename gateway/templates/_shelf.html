@@ -1,0 +1,21 @@
+{# Rayon de produits + ruban de mode dégradé. Attend : products, stale, stale_at #}
+{% if stale %}
+<div class="tape" role="status"><strong>Catalogue en mode dégradé.</strong>
+  Le service ne répond pas : voici le catalogue tel qu'il était à {{ stale_at|clock }}. Prix et stocks seront vérifiés à la commande.</div>
+{% endif %}
+<ul class="shelf">
+  {% for p in products %}
+  <li class="product">
+    <a class="cover" href="/produits/{{ p.id }}" tabindex="-1" aria-hidden="true">
+      <div class="tile tone-{{ p.tone }}">{% if p.image_url %}<img src="{{ p.image_url }}" alt="" loading="lazy">{% else %}{{ p.initial }}{% endif %}</div>
+      <span class="tag">{{ p.price|money }}</span>
+    </a>
+    <h3><a href="/produits/{{ p.id }}">{{ p.name }}</a></h3>
+    <p class="small">
+      {% if p.stock < 1 %}<span class="sold-out">Épuisé</span>
+      {% elif p.stock <= 3 %}<span class="low">Plus que {{ p.stock }}</span>
+      {% else %}<span class="muted">{{ p.category or 'En stock' }}</span>{% endif %}
+    </p>
+  </li>
+  {% endfor %}
+</ul>

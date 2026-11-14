@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Commander — {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Passer la commande</h1>
+<div class="split">
+  <form class="panel" method="post" action="/commander">
+    <input type="hidden" name="ref" value="{{ ref }}">
+    <h2>Adresse de livraison</h2>
+    <div class="fields-2">
+      <div class="field">
+        <label for="shipping_name">Nom du destinataire</label>
+        <input id="shipping_name" type="text" name="shipping_name" value="{{ values.shipping_name }}" autocomplete="name" minlength="2" maxlength="80" required>
+      </div>
+      <div class="field">
+        <label for="shipping_phone">Téléphone <span class="hint">pour le livreur</span></label>
+        <input id="shipping_phone" type="tel" name="shipping_phone" value="{{ values.shipping_phone }}" autocomplete="tel" minlength="6" maxlength="30" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="shipping_address">Adresse</label>
+      <input id="shipping_address" type="text" name="shipping_address" value="{{ values.shipping_address }}" autocomplete="street-address" minlength="4" maxlength="200" required>
+    </div>
+    <div class="field">
+      <label for="shipping_city">Ville</label>
+      <input id="shipping_city" type="text" name="shipping_city" value="{{ values.shipping_city }}" autocomplete="address-level2" minlength="2" maxlength="80" required>
+    </div>
+    <p class="muted small">Paiement à la livraison, en espèces ou par le moyen proposé par le livreur.</p>
+    <div class="actions">
+      <button class="btn" type="submit">Confirmer la commande</button>
+      <a href="/panier">Revenir au panier</a>
+    </div>
+  </form>
+  <aside class="panel">
+    <h2>Votre commande</h2>
+    <table>
+      <tbody>
+        {% for l in lines %}
+        <tr><td>{{ l.quantity }} × {{ l.name }}</td><td class="num">{{ l.subtotal|money }}</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td>Total</td><td class="num">{{ total|money }}</td></tr></tfoot>
+    </table>
+  </aside>
+</div>
+{% endblock %}

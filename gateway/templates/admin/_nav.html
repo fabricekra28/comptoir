@@ -1,0 +1,6 @@
+<ul class="subnav" aria-label="Gestion">
+  <li><a href="/admin" {% if path == '/admin' %}aria-current="page"{% endif %}>Vue d'ensemble</a></li>
+  <li><a href="/admin/commandes" {% if path.startswith('/admin/commandes') %}aria-current="page"{% endif %}>Commandes</a></li>
+  <li><a href="/admin/produits" {% if path.startswith('/admin/produits') %}aria-current="page"{% endif %}>Produits</a></li>
+  <li><a href="/admin/utilisateurs" {% if path.startswith('/admin/utilisateurs') %}aria-current="page"{% endif %}>Utilisateurs</a></li>
+</ul>

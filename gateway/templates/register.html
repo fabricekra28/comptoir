@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Créer un compte — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="panel narrow">
+  <h1>Créer un compte</h1>
+  {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/inscription">
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="field">
+      <label for="name">Nom complet</label>
+      <input id="name" type="text" name="name" value="{{ values.name or '' }}" autocomplete="name" minlength="2" maxlength="80" required autofocus>
+    </div>
+    <div class="field">
+      <label for="email">Adresse e-mail</label>
+      <input id="email" type="email" name="email" value="{{ values.email or '' }}" autocomplete="email" required>
+    </div>
+    <div class="field">
+      <label for="password">Mot de passe <span class="hint">8 caractères au moins</span></label>
+      <input id="password" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" required>
+    </div>
+    <div class="field">
+      <label for="password_confirm">Mot de passe, une seconde fois</label>
+      <input id="password_confirm" type="password" name="password_confirm" autocomplete="new-password" minlength="8" maxlength="72" required>
+    </div>
+    <button class="btn" type="submit">Créer mon compte</button>
+  </form>
+  <p class="small" style="margin:1.25rem 0 0">Déjà inscrit ? <a href="/connexion?next={{ next|urlencode }}">Se connecter</a></p>
+</div>
+{% endblock %}

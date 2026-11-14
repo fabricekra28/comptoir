@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Utilisateurs — Gestion{% endblock %}
+{% block content %}
+<h1>Utilisateurs</h1>
+{% include "admin/_nav.html" %}
+<div class="panel table-wrap">
+  <table>
+    <thead><tr><th>Nom</th><th>E-mail</th><th>Inscrit le</th><th>Rôle</th><th>État</th><th></th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr {% if not u.is_active %}class="off"{% endif %}>
+        <td><strong>{{ u.name }}</strong>{% if u.id == user.id %} <span class="muted small">(vous)</span>{% endif %}</td>
+        <td>{{ u.email }}</td>
+        <td class="nowrap small">{{ u.created_at|when('%d/%m/%Y') }}</td>
+        <td>{{ 'Administrateur' if u.role == 'admin' else 'Client' }}</td>
+        <td>{{ 'Actif' if u.is_active else 'Désactivé' }}</td>
+        <td class="right">
+          {% if u.id != user.id %}
+          <form class="actions" method="post" action="/admin/utilisateurs/{{ u.id }}" style="justify-content:flex-end">
+            <button class="btn ghost small" name="role" value="{{ 'customer' if u.role == 'admin' else 'admin' }}" type="submit">{{ 'Repasser client' if u.role == 'admin' else 'Nommer administrateur' }}</button>
+            <button class="btn {{ 'danger' if u.is_active else 'ghost' }} small" name="is_active" value="{{ 'false' if u.is_active else 'true' }}" type="submit">{{ 'Désactiver' if u.is_active else 'Réactiver' }}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Catalogue — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>{% if q %}Résultats pour « {{ q }} »{% elif category %}{{ category }}{% else %}Catalogue{% endif %}</h1>
+  {% if not catalog_down %}<span class="muted">{{ products|length }} article{{ 's' if products|length > 1 }}</span>{% endif %}
+</div>
+{% if categories %}
+<ul class="aisles" aria-label="Rayons" style="margin:0 0 2rem">
+  <li><a href="/catalogue" {% if not category %}class="on"{% endif %}>Tout</a></li>
+  {% for c in categories %}<li><a href="/catalogue?categorie={{ c|urlencode }}" {% if c == category %}class="on"{% endif %}>{{ c }}</a></li>{% endfor %}
+</ul>
+{% endif %}
+{% if catalog_down %}
+  <div class="tape" role="status"><strong>Le catalogue ne répond pas pour le moment.</strong>
+    Votre compte, votre panier et vos commandes restent accessibles. <a href="{{ path }}">Réessayer</a></div>
+{% elif products %}
+  {% include "_shelf.html" %}
+{% else %}
+  <div class="empty">
+    <h2>Aucun article ne correspond</h2>
+    <p class="muted">Essayez un autre mot ou parcourez un rayon.</p>
+    <a class="btn ghost" href="/catalogue">Voir tout le catalogue</a>
+  </div>
+{% endif %}
+{% endblock %}

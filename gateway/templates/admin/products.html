@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Produits — Gestion{% endblock %}
+{% block content %}
+<div class="head"><h1>Produits</h1><a class="btn" href="/admin/produits/nouveau">Ajouter un produit</a></div>
+{% include "admin/_nav.html" %}
+{% if not products %}
+  <div class="empty"><h2>Le catalogue est vide</h2><a class="btn" href="/admin/produits/nouveau">Ajouter un produit</a></div>
+{% else %}
+<div class="panel table-wrap">
+  <table>
+    <thead><tr><th>Produit</th><th>Rayon</th><th class="num">Prix</th><th class="num">Stock</th><th>En vente</th><th></th></tr></thead>
+    <tbody>
+      {% for p in products %}
+      <tr {% if not p.is_active %}class="off"{% endif %}>
+        <td><a href="/admin/produits/{{ p.id }}"><strong>{{ p.name }}</strong></a></td>
+        <td>{{ p.category or '—' }}</td>
+        <td class="num">{{ p.price|money }}</td>
+        <td class="num {{ 'sold-out' if p.stock < 1 else ('low' if p.stock <= 3 else '') }}">{{ p.stock }}</td>
+        <td>{{ 'Oui' if p.is_active else 'Non' }}</td>
+        <td class="right">
+          <form method="post" action="/admin/produits/{{ p.id }}/supprimer" onsubmit="return confirm('Supprimer ce produit ?')">
+            <button class="btn danger small" type="submit">Supprimer</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

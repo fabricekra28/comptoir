@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Commande n° {{ order.id }} — {{ app_name }}{% endblock %}
+{% block content %}
+<p class="small"><a href="/commandes">Mes commandes</a></p>
+<div class="head">
+  <h1>Commande n° {{ order.id }}</h1>
+  <span class="badge {{ order.status }}">{{ order.status|status }}</span>
+</div>
+<p class="muted">Passée le {{ order.created_at|when }}{% if order.user_id != user.id %} par {{ order.user_name }} ({{ order.user_email }}){% endif %}</p>
+<div class="split">
+  <div class="panel table-wrap">
+    <table>
+      <thead><tr><th>Article</th><th class="num">Prix</th><th class="num">Quantité</th><th class="num">Sous-total</th></tr></thead>
+      <tbody>
+        {% for i in order['items'] %}
+        <tr>
+          <td><a href="/produits/{{ i.product_id }}">{{ i.product_name }}</a></td>
+          <td class="num">{{ i.unit_price|money }}</td>
+          <td class="num">{{ i.quantity }}</td>
+          <td class="num">{{ (i.unit_price * i.quantity)|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="3">Total, à régler à la livraison</td><td class="num">{{ order.total|money }}</td></tr></tfoot>
+    </table>
+  </div>
+  <aside class="panel">
+    <h2>Livraison</h2>
+    <p>{{ order.shipping_name }}<br>{{ order.shipping_address }}<br>{{ order.shipping_city }}<br>{{ order.shipping_phone }}</p>
+    <div class="actions">
+      {% for value, label in admin_actions %}
+      <form method="post" action="/admin/commandes/{{ order.id }}/statut">
+        <input type="hidden" name="status" value="{{ value }}">
+        <button class="btn small" type="submit">{{ label }}</button>
+      </form>
+      {% endfor %}
+      {% if can_cancel or (admin_actions and order.status == 'shipped') %}
+      <form method="post" action="/commandes/{{ order.id }}/annuler">
+        <button class="btn danger small" type="submit">Annuler la commande</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if order.status == 'shipped' and not admin_actions %}<p class="small muted" style="margin:.75rem 0 0">Le colis est parti : la commande ne peut plus être annulée en ligne.</p>{% endif %}
+  </aside>
+</div>
+{% endblock %}

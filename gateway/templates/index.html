@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} — la boutique du quotidien{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Les objets de tous les jours, livrés chez vous.</h1>
+  <p>Cuisine, maison, papeterie, bagagerie. Vous commandez en ligne et vous payez à la livraison.</p>
+  {% if categories %}
+  <ul class="aisles" aria-label="Rayons">
+    {% for c in categories %}<li><a href="/catalogue?categorie={{ c|urlencode }}">{{ c }}</a></li>{% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<section>
+  <div class="head">
+    <h2>Derniers arrivages</h2>
+    <a href="/catalogue">Voir tout le catalogue</a>
+  </div>
+  {% if catalog_down %}
+    <div class="tape" role="status"><strong>Le catalogue ne répond pas pour le moment.</strong>
+      Votre compte, votre panier et vos commandes restent accessibles. <a href="/">Recharger la page</a></div>
+  {% elif products %}
+    {% include "_shelf.html" %}
+  {% else %}
+    <p class="muted">Le catalogue est vide pour l'instant.</p>
+  {% endif %}
+</section>
+
+<section class="promises">
+  <div><h3>Paiement à la livraison</h3><p>Rien à régler en ligne : vous payez quand le colis arrive.</p></div>
+  <div><h3>Annulation libre</h3><p>Tant que le colis n'est pas parti, vous annulez depuis votre compte.</p></div>
+  <div><h3>Suivi de commande</h3><p>Chaque étape vous est signalée dans vos messages.</p></div>
+</section>
+{% endblock %}

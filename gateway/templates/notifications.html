@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Messages — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>Messages</h1>
+  {% if items|selectattr('is_read', 'false')|list %}
+  <form method="post" action="/notifications/lire"><button class="btn ghost small" type="submit">Tout marquer comme lu</button></form>
+  {% endif %}
+</div>
+{% if not items %}
+  <div class="empty"><h2>Aucun message</h2><p class="muted">Le suivi de vos commandes s'affichera ici.</p></div>
+{% else %}
+  <div class="panel">
+    <ul class="list">
+      {% for n in items %}
+      <li {% if not n.is_read %}class="unread"{% endif %}>
+        <strong>{% if n.link %}<a href="{{ n.link }}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</strong>
+        {% if not n.is_read %}<span class="count">nouveau</span>{% endif %}
+        <br>{{ n.body }}
+        <br><span class="small muted">{{ n.created_at|when }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+{% endblock %}

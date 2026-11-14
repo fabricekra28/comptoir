@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Mes commandes — {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Mes commandes</h1>
+{% if not orders %}
+  <div class="empty">
+    <h2>Aucune commande pour l'instant</h2>
+    <p class="muted">Vos commandes apparaîtront ici, avec leur suivi.</p>
+    <a class="btn" href="/catalogue">Parcourir le catalogue</a>
+  </div>
+{% else %}
+  <div class="panel table-wrap">
+    <table>
+      <thead><tr><th>Commande</th><th>Date</th><th>Articles</th><th>État</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td><a href="/commandes/{{ o.id }}"><strong>n° {{ o.id }}</strong></a></td>
+          <td class="nowrap">{{ o.created_at|when('%d/%m/%Y') }}</td>
+          <td class="small">{{ o['items']|map(attribute='product_name')|join(', ')|truncate(70) }}</td>
+          <td><span class="badge {{ o.status }}">{{ o.status|status }}</span></td>
+          <td class="num">{{ o.total|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

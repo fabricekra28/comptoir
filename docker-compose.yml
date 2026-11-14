@@ -1,0 +1,89 @@
+# Lancement local :  cp .env.example .env  (modifier les secrets)  puis  docker compose up --build
+# Seule la gateway est exposée ; les services ne sont joignables que sur le réseau interne.
+
+x-service: &service
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+
+x-secrets: &secrets
+  JWT_SECRET: ${JWT_SECRET:?Définissez JWT_SECRET dans le fichier .env}
+  INTERNAL_TOKEN: ${INTERNAL_TOKEN:?Définissez INTERNAL_TOKEN dans le fichier .env}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Définissez POSTGRES_PASSWORD dans le fichier .env}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  users-service:
+    <<: *service
+    build: ./users
+    environment:
+      <<: *secrets
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/users_db
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+
+  products-service:
+    <<: *service
+    build: ./products
+    environment:
+      <<: *secrets
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/products_db
+      SEED_DEMO: ${SEED_DEMO:-false}
+
+  orders-service:
+    <<: *service
+    build: ./orders
+    environment:
+      <<: *secrets
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/orders_db
+      PRODUCTS_SERVICE_URL: http://products-service:8002
+      NOTIFICATIONS_SERVICE_URL: http://notifications-service:8005
+
+  cart-service:
+    <<: *service
+    build: ./cart
+    environment:
+      <<: *secrets
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/cart_db
+
+  notifications-service:
+    <<: *service
+    build: ./notifications
+    environment:
+      <<: *secrets
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/notifications_db
+
+  gateway:
+    build: ./gateway
+    restart: unless-stopped
+    # Pas de depends_on : la gateway démarre et fonctionne même si un service manque.
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+    environment:
+      <<: *secrets
+      USERS_SERVICE_URL: http://users-service:8001
+      PRODUCTS_SERVICE_URL: http://products-service:8002
+      ORDERS_SERVICE_URL: http://orders-service:8003
+      CART_SERVICE_URL: http://cart-service:8004
+      NOTIFICATIONS_SERVICE_URL: http://notifications-service:8005
+      APP_NAME: ${APP_NAME:-Comptoir}
+      CURRENCY: ${CURRENCY:-€}
+      CURRENCY_DECIMALS: ${CURRENCY_DECIMALS:-2}
+      APP_TIMEZONE: ${APP_TIMEZONE:-UTC}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+
+volumes:
+  db_data:

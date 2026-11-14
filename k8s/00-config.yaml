@@ -1,0 +1,34 @@
+# Namespace « microservices », comme dans votre déploiement actuel.
+# Remplacez les valeurs du Secret avant d'appliquer (ou créez-le avec kubectl create secret).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: boutique-config
+  namespace: microservices
+data:
+  USERS_SERVICE_URL: http://users-service:8001
+  PRODUCTS_SERVICE_URL: http://products-service:8002
+  ORDERS_SERVICE_URL: http://orders-service:8003
+  CART_SERVICE_URL: http://cart-service:8004
+  NOTIFICATIONS_SERVICE_URL: http://notifications-service:8005
+  APP_NAME: Comptoir
+  CURRENCY: "€"
+  CURRENCY_DECIMALS: "2"
+  APP_TIMEZONE: UTC
+  COOKIE_SECURE: "true"      # le site doit être servi en HTTPS par votre Ingress
+  SEED_DEMO: "false"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: boutique-secrets
+  namespace: microservices
+type: Opaque
+stringData:
+  JWT_SECRET: REMPLACER
+  INTERNAL_TOKEN: REMPLACER
+  # Votre base actuelle convient : les nouvelles tables portent des noms distincts
+  # et les tables users/products existantes sont complétées au démarrage.
+  DATABASE_URL: postgresql://UTILISATEUR:MOTDEPASSE@db.microservices.svc.cluster.local:5432/BASE
+  ADMIN_EMAIL: admin@example.com
+  ADMIN_PASSWORD: REMPLACER
