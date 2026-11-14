@@ -1,0 +1,180 @@
+# Réglages de la chart Comptoir.
+# Les secrets ne se mettent PAS dans ce fichier : voir la section « secrets » en bas.
+
+# ---------- Images ----------
+# Image de chaque service : <registry>/<repository>/<prefix>-<service>:<tag>
+# soit par exemple docker.io/fabrice28/comptoir-gateway:42
+image:
+  registry: docker.io
+  repository: fabrice28
+  prefix: comptoir
+  # Jenkins remplace cette valeur par le numéro du build. Évitez « latest » en production.
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# À renseigner seulement si vos dépôts Docker Hub sont privés.
+imagePullSecrets: []
+
+# ---------- Boutique ----------
+app:
+  name: Comptoir
+  currency: "€"
+  currencyDecimals: 2
+  timezone: UTC
+  tokenHours: 8
+  # true : remplit le catalogue de 12 produits d'exemple s'il est vide.
+  seedDemo: true
+  # Le cookie de session n'est envoyé qu'en HTTPS. Passe automatiquement à true
+  # quand exposure.gatewayApi.tls.enabled vaut true.
+  cookieSecure: false
+
+# ---------- Services ----------
+# database : nom de la base du service (absent pour la gateway, qui n'en a pas).
+services:
+  gateway:
+    port: 8000
+    replicas: 2
+    livenessPath: /healthz
+    readinessPath: /healthz
+  users:
+    port: 8001
+    replicas: 2
+    database: users_db
+    livenessPath: /live
+    readinessPath: /health
+  products:
+    port: 8002
+    replicas: 2
+    database: products_db
+    livenessPath: /live
+    readinessPath: /health
+  orders:
+    port: 8003
+    replicas: 2
+    database: orders_db
+    livenessPath: /live
+    readinessPath: /health
+  cart:
+    port: 8004
+    replicas: 2
+    database: cart_db
+    livenessPath: /live
+    readinessPath: /health
+  notifications:
+    port: 8005
+    replicas: 1
+    database: notifications_db
+    livenessPath: /live
+    readinessPath: /health
+
+# Ressources de chaque pod applicatif.
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# ---------- Durcissement des pods ----------
+# Les images tournent sans droits root, sur un système de fichiers en lecture seule.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# ---------- Accès depuis l'extérieur ----------
+# Seule la gateway de la boutique est exposée ; les autres services restent internes.
+exposure:
+  # Premier test : la boutique répond sur http://<adresse-d-un-noeud>:30080
+  # Ignoré (ClusterIP) dès que gatewayApi.enabled vaut true.
+  service:
+    type: NodePort
+    nodePort: 30080
+
+  # Cible : Gateway API + HTTPS. Demande un contrôleur Gateway API installé dans le cluster.
+  gatewayApi:
+    enabled: false
+    # true : la chart crée l'objet Gateway. false : elle se branche sur un Gateway existant.
+    createGateway: true
+    gatewayName: comptoir
+    # Namespace du Gateway existant (si createGateway vaut false).
+    gatewayNamespace: ""
+    # Nom de la GatewayClass fournie par votre contrôleur (ex. traefik, eg, nginx).
+    gatewayClassName: ""
+    # Nom de domaine de la boutique, ex. boutique.exemple.com
+    hostname: ""
+    tls:
+      enabled: false
+      # Secret TLS contenant le certificat (créé par cert-manager ou à la main).
+      secretName: comptoir-tls
+      # ClusterIssuer cert-manager, ex. letsencrypt-prod. Vide : certificat fourni à la main.
+      clusterIssuer: ""
+
+# ---------- Cloisonnement réseau ----------
+# Tout trafic est refusé par défaut ; seuls les échanges nécessaires sont ouverts.
+# Sans effet si le plugin réseau du cluster ne gère pas les NetworkPolicies.
+networkPolicy:
+  enabled: true
+  # Namespace du contrôleur Gateway API : s'il est renseigné, lui seul peut joindre la gateway.
+  gatewayControllerNamespace: ""
+  # Namespace de Prometheus : s'il est renseigné, il peut lire /metrics sur chaque pod.
+  monitoringNamespace: ""
+  # Plage d'adresses de la base externe (utile seulement si postgresql.enabled vaut false).
+  externalDatabaseCidr: 0.0.0.0/0
+
+# ---------- Base de données ----------
+postgresql:
+  # true : la chart déploie PostgreSQL. false : elle utilise externalDatabase.
+  enabled: true
+  image: postgres:16-alpine
+  user: comptoir
+  storage:
+    size: 2Gi
+    # Vide : classe de stockage par défaut du cluster.
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+# Base existante (si postgresql.enabled vaut false). Les bases users_db, products_db,
+# orders_db, cart_db et notifications_db doivent déjà exister.
+externalDatabase:
+  host: ""
+  port: 5432
+  user: comptoir
+
+# ---------- Secrets ----------
+# Recommandé : créer le Secret une fois à la main dans le cluster, puis donner son nom ici.
+#
+#   kubectl create namespace comptoir
+#   kubectl -n comptoir create secret generic comptoir-secrets \
+#     --from-literal=JWT_SECRET="$(openssl rand -base64 48)" \
+#     --from-literal=INTERNAL_TOKEN="$(openssl rand -base64 48)" \
+#     --from-literal=POSTGRES_PASSWORD="$(openssl rand -hex 24)" \
+#     --from-literal=ADMIN_EMAIL="admin@exemple.com" \
+#     --from-literal=ADMIN_PASSWORD="un-mot-de-passe-solide"
+#
+# POSTGRES_PASSWORD : lettres et chiffres uniquement (il est inséré dans une adresse de connexion).
+secrets:
+  existingSecret: ""
+  # Autre possibilité, pour un essai rapide : laisser existingSecret vide et passer
+  # ces valeurs avec --set. Elles restent alors lisibles dans l'historique Helm.
+  jwtSecret: ""
+  internalToken: ""
+  postgresPassword: ""
+  adminEmail: ""
+  adminPassword: ""

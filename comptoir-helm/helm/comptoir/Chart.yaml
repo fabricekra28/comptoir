@@ -1,0 +1,6 @@
+apiVersion: v2
+name: comptoir
+description: Boutique en ligne Comptoir - gateway, cinq services et PostgreSQL
+type: application
+version: 0.1.0
+appVersion: "2.0"

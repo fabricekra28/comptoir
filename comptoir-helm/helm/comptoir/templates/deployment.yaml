@@ -1,0 +1,121 @@
+{{- range $name, $svc := .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "comptoir.svcName" $name }}
+  labels:
+    {{- include "comptoir.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ int $svc.replicas }}
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "comptoir.selector" (dict "root" $ "component" $name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "comptoir.selector" (dict "root" $ "component" $name) | nindent 8 }}
+        {{- if $svc.database }}
+        comptoir/database-client: "true"
+        {{- end }}
+      annotations:
+        # Un changement de configuration redémarre les pods.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      # Répartit les réplicas sur plusieurs noeuds quand c'est possible.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "comptoir.selector" (dict "root" $ "component" $name) | nindent 14 }}
+      containers:
+        - name: {{ $name }}
+          image: {{ printf "%s/%s/%s-%s:%v" $.Values.image.registry $.Values.image.repository $.Values.image.prefix $name $.Values.image.tag | quote }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ int $svc.port }}
+          envFrom:
+            - configMapRef:
+                name: comptoir-config
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "comptoir.secretName" $ }}
+                  key: JWT_SECRET
+            - name: INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "comptoir.secretName" $ }}
+                  key: INTERNAL_TOKEN
+            {{- if $svc.database }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "comptoir.secretName" $ }}
+                  key: POSTGRES_PASSWORD
+            # Kubernetes remplace $(POSTGRES_PASSWORD) par la valeur définie juste au-dessus.
+            - name: DATABASE_URL
+              value: {{ printf "postgresql://%s:$(POSTGRES_PASSWORD)@%s:%s/%s" (include "comptoir.dbUser" $) (include "comptoir.dbHost" $) (include "comptoir.dbPort" $) $svc.database | quote }}
+            {{- end }}
+            {{- if eq $name "users" }}
+            - name: ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "comptoir.secretName" $ }}
+                  key: ADMIN_EMAIL
+                  optional: true
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "comptoir.secretName" $ }}
+                  key: ADMIN_PASSWORD
+                  optional: true
+            {{- end }}
+          # Laisse jusqu'à 2 min 30 au démarrage (le service patiente si sa base n'est pas prête).
+          startupProbe:
+            httpGet:
+              path: {{ $svc.livenessPath }}
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.livenessPath }}
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: {{ $svc.readinessPath }}
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml (default $.Values.resources $svc.resources) | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

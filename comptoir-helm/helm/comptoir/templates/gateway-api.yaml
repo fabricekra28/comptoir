@@ -1,0 +1,90 @@
+{{/*
+Porte d'entrée du cluster (Gateway API). À ne pas confondre avec le service « gateway »,
+qui est le site de la boutique : le premier envoie le trafic vers le second.
+*/}}
+{{- $gw := .Values.exposure.gatewayApi }}
+{{- if $gw.enabled }}
+{{- $hostname := required "exposure.gatewayApi.hostname est obligatoire (nom de domaine de la boutique)" $gw.hostname }}
+{{- if $gw.createGateway }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ $gw.gatewayName }}
+  labels:
+    {{- include "comptoir.labels" . | nindent 4 }}
+  {{- if and $gw.tls.enabled $gw.tls.clusterIssuer }}
+  annotations:
+    # cert-manager obtient et renouvelle le certificat.
+    cert-manager.io/cluster-issuer: {{ $gw.tls.clusterIssuer | quote }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ required "exposure.gatewayApi.gatewayClassName est obligatoire (GatewayClass de votre contrôleur)" $gw.gatewayClassName }}
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: {{ $hostname | quote }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+    {{- if $gw.tls.enabled }}
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: {{ $hostname | quote }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: {{ $gw.tls.secretName }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+    {{- end }}
+---
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: comptoir
+  labels:
+    {{- include "comptoir.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ $gw.gatewayName }}
+      {{- if and (not $gw.createGateway) $gw.gatewayNamespace }}
+      namespace: {{ $gw.gatewayNamespace }}
+      {{- end }}
+      sectionName: {{ ternary "https" "http" $gw.tls.enabled }}
+  hostnames:
+    - {{ $hostname | quote }}
+  rules:
+    - backendRefs:
+        - name: gateway
+          port: {{ int .Values.services.gateway.port }}
+{{- if $gw.tls.enabled }}
+---
+# Toute requête HTTP est renvoyée vers HTTPS.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: comptoir-https-redirect
+  labels:
+    {{- include "comptoir.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ $gw.gatewayName }}
+      {{- if and (not $gw.createGateway) $gw.gatewayNamespace }}
+      namespace: {{ $gw.gatewayNamespace }}
+      {{- end }}
+      sectionName: http
+  hostnames:
+    - {{ $hostname | quote }}
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+{{- end }}
+{{- end }}

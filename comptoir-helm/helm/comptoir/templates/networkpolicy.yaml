@@ -1,0 +1,151 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+# 1. Par défaut : aucun pod du namespace ne reçoit ni n'émet de trafic.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  labels:
+    {{- include "comptoir.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# 2. Tous les pods peuvent résoudre les noms (DNS).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  labels:
+    {{- include "comptoir.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- range $name, $svc := .Values.services }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "comptoir.svcName" $name }}
+  labels:
+    {{- include "comptoir.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "comptoir.selector" (dict "root" $ "component" $name) | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if eq $name "gateway" }}
+    # Entrée du site : depuis le contrôleur Gateway API s'il est indiqué, sinon depuis l'extérieur.
+    - ports:
+        - protocol: TCP
+          port: {{ int $svc.port }}
+      {{- if $np.gatewayControllerNamespace }}
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $np.gatewayControllerNamespace }}
+      {{- end }}
+    {{- else }}
+    - ports:
+        - protocol: TCP
+          port: {{ int $svc.port }}
+      from:
+        - podSelector:
+            matchLabels:
+              {{- include "comptoir.selector" (dict "root" $ "component" "gateway") | nindent 14 }}
+        {{- if or (eq $name "products") (eq $name "notifications") }}
+        # orders réserve le stock et envoie les messages de suivi.
+        - podSelector:
+            matchLabels:
+              {{- include "comptoir.selector" (dict "root" $ "component" "orders") | nindent 14 }}
+        {{- end }}
+    {{- end }}
+    {{- if $np.monitoringNamespace }}
+    - ports:
+        - protocol: TCP
+          port: {{ int $svc.port }}
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $np.monitoringNamespace }}
+    {{- end }}
+  egress:
+    {{- if eq $name "gateway" }}
+    {{- range $target, $t := $.Values.services }}
+    {{- if ne $target "gateway" }}
+    - ports:
+        - protocol: TCP
+          port: {{ int $t.port }}
+      to:
+        - podSelector:
+            matchLabels:
+              {{- include "comptoir.selector" (dict "root" $ "component" $target) | nindent 14 }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if eq $name "orders" }}
+    {{- range $target := list "products" "notifications" }}
+    - ports:
+        - protocol: TCP
+          port: {{ int (index $.Values.services $target).port }}
+      to:
+        - podSelector:
+            matchLabels:
+              {{- include "comptoir.selector" (dict "root" $ "component" $target) | nindent 14 }}
+    {{- end }}
+    {{- end }}
+    {{- if $svc.database }}
+    - ports:
+        - protocol: TCP
+          port: {{ include "comptoir.dbPort" $ }}
+      to:
+        {{- if $.Values.postgresql.enabled }}
+        - podSelector:
+            matchLabels:
+              {{- include "comptoir.selector" (dict "root" $ "component" "postgres") | nindent 14 }}
+        {{- else }}
+        - ipBlock:
+            cidr: {{ $np.externalDatabaseCidr }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+{{- if .Values.postgresql.enabled }}
+---
+# PostgreSQL : joignable uniquement par les services qui ont une base, et n'émet rien.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres
+  labels:
+    {{- include "comptoir.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "comptoir.selector" (dict "root" . "component" "postgres") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 5432
+      from:
+        - podSelector:
+            matchLabels:
+              comptoir/database-client: "true"
+{{- end }}
+{{- end }}

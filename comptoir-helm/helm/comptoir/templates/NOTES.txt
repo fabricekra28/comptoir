@@ -1,0 +1,22 @@
+Comptoir est déployé dans le namespace {{ .Release.Namespace }} (images : tag {{ .Values.image.tag }}).
+
+Suivre le démarrage :
+  kubectl -n {{ .Release.Namespace }} get pods
+
+{{- if .Values.exposure.gatewayApi.enabled }}
+
+Adresse de la boutique :
+  {{ ternary "https" "http" .Values.exposure.gatewayApi.tls.enabled }}://{{ .Values.exposure.gatewayApi.hostname }}
+{{- else if eq .Values.exposure.service.type "NodePort" }}
+
+Adresse de la boutique (accès de test, sans HTTPS) :
+  http://<adresse-d-un-noeud>:{{ int .Values.exposure.service.nodePort }}
+  Adresses des noeuds : kubectl get nodes -o wide
+{{- else }}
+
+Accès depuis votre poste :
+  kubectl -n {{ .Release.Namespace }} port-forward svc/gateway 8000:{{ int .Values.services.gateway.port }}
+  puis http://localhost:8000
+{{- end }}
+
+État de chaque service : page /etat de la boutique.
