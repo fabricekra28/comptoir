@@ -12,7 +12,7 @@ pipeline {
         booleanParam(
             name: 'DEPLOY',
             defaultValue: false,
-            description: 'Déployer sur Kubernetes avec Helm après la publication des images'
+            description: 'Déployer : inscrire la version de ce build dans Git, puis Argo CD met le cluster à jour'
         )
     }
 
@@ -28,8 +28,8 @@ pipeline {
         HELM_CHART = 'helm/comptoir'
         HELM_RELEASE = 'comptoir'
         K8S_NAMESPACE = 'comptoir'
-        // Secret créé une fois à la main dans le cluster (voir helm/comptoir/values.yaml).
-        K8S_SECRET = 'comptoir-secrets'
+        // Fichier lu par Argo CD : il contient la version des images à déployer.
+        IMAGE_TAG_FILE = 'helm/comptoir/image-tag.yaml'
         EMAIL_RECIPIENT = 'krafabrice64@gmail.com'
     }
 
@@ -473,13 +473,14 @@ pipeline {
 
                         helm version --short
 
+                        # Mêmes fichiers de valeurs qu'Argo CD.
                         helm lint "$HELM_CHART" \
-                          --set secrets.existingSecret="$K8S_SECRET" \
+                          --values "$HELM_CHART/values-k3s.yaml" \
                           --set image.tag="$BUILD_NUMBER"
 
                         helm template "$HELM_RELEASE" "$HELM_CHART" \
                           --namespace "$K8S_NAMESPACE" \
-                          --set secrets.existingSecret="$K8S_SECRET" \
+                          --values "$HELM_CHART/values-k3s.yaml" \
                           --set image.tag="$BUILD_NUMBER" \
                           > reports/helm-rendered.yaml
 
@@ -489,43 +490,52 @@ pipeline {
             }
         }
 
-        // Déploie exactement les images de ce build (tag = numéro du build).
-        // En cas d'échec, Helm revient seul à la version précédente (--atomic).
-        stage('13 - Deploy / Helm') {
+        // GitOps : Jenkins n'accède pas au cluster. Il inscrit dans Git la version des images
+        // de ce build ; Argo CD voit le changement et met le cluster à jour.
+        stage('13 - Deploy / GitOps (Argo CD)') {
             when {
                 expression { return params.DEPLOY }
             }
             steps {
                 withCredentials([
-                    file(credentialsId: 'kubeconfig-comptoir', variable: 'KUBECONFIG')
+                    usernamePassword(
+                        credentialsId: 'github-comptoir',
+                        usernameVariable: 'GH_USER',
+                        passwordVariable: 'GH_TOKEN'
+                    )
                 ]) {
                     sh '''
                         set -eu
+                        set +x
 
-                        if command -v kubectl >/dev/null 2>&1; then
-                            if ! kubectl -n "$K8S_NAMESPACE" get secret "$K8S_SECRET" >/dev/null 2>&1; then
-                                echo "ERREUR : le Secret $K8S_SECRET est absent du namespace $K8S_NAMESPACE."
-                                echo "Créez-le une fois à la main : la commande est dans helm/comptoir/values.yaml."
-                                exit 1
-                            fi
+                        git config user.name "Jenkins"
+                        git config user.email "jenkins@comptoir.local"
+
+                        # Le jeton n'est écrit ni dans l'adresse du dépôt ni dans les logs.
+                        git config credential.helper \
+                          '!f() { echo "username=$GH_USER"; echo "password=$GH_TOKEN"; }; f'
+
+                        # Reprend les commits arrivés sur main pendant le build.
+                        git pull --rebase origin main
+
+                        printf '%s\n' \
+                          "# Version des images déployée par Argo CD." \
+                          "# Fichier réécrit par Jenkins à chaque déploiement (étape 13) : ne pas le modifier à la main." \
+                          "image:" \
+                          "  tag: \"${BUILD_NUMBER}\"" \
+                          > "$IMAGE_TAG_FILE"
+
+                        git add "$IMAGE_TAG_FILE"
+
+                        if git diff --cached --quiet; then
+                            echo "Version déjà inscrite dans Git : rien à pousser."
+                        else
+                            git commit -m "deploy: images du build ${BUILD_NUMBER}"
+                            git push origin HEAD:main
+                            echo "Version ${BUILD_NUMBER} inscrite dans Git. Argo CD déploie dans les minutes qui suivent."
                         fi
 
-                        helm upgrade --install "$HELM_RELEASE" "$HELM_CHART" \
-                          --namespace "$K8S_NAMESPACE" \
-                          --create-namespace \
-                          --set image.tag="$BUILD_NUMBER" \
-                          --set secrets.existingSecret="$K8S_SECRET" \
-                          --atomic \
-                          --wait \
-                          --timeout 10m
-
-                        helm -n "$K8S_NAMESPACE" history "$HELM_RELEASE" --max 5
-
-                        if command -v kubectl >/dev/null 2>&1; then
-                            kubectl -n "$K8S_NAMESPACE" get pods -o wide
-                        fi
-
-                        echo "Déploiement terminé : images ${IMAGE_PREFIX}-*:${BUILD_NUMBER}"
+                        git config --unset credential.helper || true
                     '''
                 }
             }
@@ -632,7 +642,7 @@ pipeline {
                             <li>Tests dynamiques : OWASP ZAP (site et API de chaque service)</li>
                             <li>Publication Docker Hub</li>
                             <li>Contrôle de la chart Helm</li>
-                            <li>Déploiement Kubernetes : ${params.DEPLOY ? 'demandé' : 'non demandé pour ce build'}</li>
+                            <li>Déploiement par Argo CD : ${params.DEPLOY ? 'demandé (version inscrite dans Git)' : 'non demandé pour ce build'}</li>
                         </ul>
 
                         <p>

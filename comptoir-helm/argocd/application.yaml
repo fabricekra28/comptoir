@@ -1,0 +1,28 @@
+# Argo CD suit le dépôt Git et applique la chart dans le cluster.
+# À appliquer une fois :  kubectl apply -f argocd/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: comptoir
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/fabricekra28/comptoir.git
+    targetRevision: main
+    path: helm/comptoir
+    helm:
+      releaseName: comptoir
+      valueFiles:
+        - values-k3s.yaml
+        - image-tag.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: comptoir
+  syncPolicy:
+    automated:
+      # Supprime du cluster ce qui a disparu de Git, et annule les modifications faites à la main.
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

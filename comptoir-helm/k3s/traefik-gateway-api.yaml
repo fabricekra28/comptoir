@@ -1,0 +1,13 @@
+# Active Gateway API dans le Traefik fourni avec k3s.
+# À appliquer une fois :  kubectl apply -f k3s/traefik-gateway-api.yaml
+# k3s redéploie alors Traefik tout seul (une minute environ).
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    providers:
+      kubernetesGateway:
+        enabled: true

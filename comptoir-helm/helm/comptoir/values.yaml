@@ -113,6 +113,11 @@ exposure:
     gatewayClassName: ""
     # Nom de domaine de la boutique, ex. boutique.exemple.com
     hostname: ""
+    # Ports d'écoute du Gateway. Avec Traefik (k3s), ce sont ses ports internes : 8000 et 8443.
+    httpPort: 80
+    httpsPort: 443
+    # Port HTTPS vu par les visiteurs, utilisé pour la redirection de HTTP vers HTTPS.
+    publicHttpsPort: 443
     tls:
       enabled: false
       # Secret TLS contenant le certificat (créé par cert-manager ou à la main).

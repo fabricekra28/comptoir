@@ -1,0 +1,24 @@
+# Réglages pour un cluster k3s local : Traefik (fourni avec k3s) en Gateway API,
+# HTTPS avec un certificat auto-signé. Lu par Argo CD en plus de values.yaml.
+
+secrets:
+  # Secret créé une fois à la main (voir README.md).
+  existingSecret: comptoir-secrets
+
+exposure:
+  gatewayApi:
+    enabled: true
+    gatewayClassName: traefik
+    # Ajoutez « <adresse-du-noeud-k3s> comptoir.test » à /etc/hosts sur votre poste.
+    hostname: comptoir.test
+    # Ports internes de Traefik ; les visiteurs utilisent toujours 80 et 443.
+    httpPort: 8000
+    httpsPort: 8443
+    tls:
+      enabled: true
+      # Certificat auto-signé créé à la main (voir README.md).
+      secretName: comptoir-tls
+
+networkPolicy:
+  # Sur k3s, Traefik tourne dans kube-system : lui seul peut joindre la gateway.
+  gatewayControllerNamespace: kube-system
