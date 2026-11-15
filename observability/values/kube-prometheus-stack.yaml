@@ -127,6 +127,13 @@ grafana:
   grafana.ini:
     server:
       root_url: https://grafana.test:8443
+  # Loki, pour consulter les journaux dans Grafana (menu Explore, source Loki).
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100
   resources:
     requests:
       cpu: 100m

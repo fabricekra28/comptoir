@@ -1,0 +1,90 @@
+# Réglages d'Alloy : un exemplaire par nœud (VmCD et VM3), qui lit les journaux
+# des pods de son nœud dans /var/log/pods et les envoie à Loki.
+
+controller:
+  type: daemonset
+  # Tourne aussi sur la VM3, malgré sa restriction.
+  tolerations:
+    - operator: Exists
+
+alloy:
+  # Donne accès en lecture seule à /var/log du nœud, où se trouvent les journaux des pods.
+  mounts:
+    varlog: true
+  extraEnv:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+  enableReporting: false
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+  configMap:
+    content: |
+      // 1. Les pods du nœud sur lequel tourne cet exemplaire d'Alloy.
+      discovery.kubernetes "pods" {
+        role = "pod"
+        selectors {
+          role  = "pod"
+          field = "spec.nodeName=" + sys.env("NODE_NAME")
+        }
+      }
+
+      // 2. Les étiquettes de chaque journal, et le chemin de ses fichiers.
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          target_label  = "node"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_component"]
+          target_label  = "app"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+          separator     = "/"
+          target_label  = "__path__"
+          replacement   = "/var/log/pods/*$1/*.log"
+        }
+      }
+
+      // 3. Lecture des fichiers de journaux.
+      local.file_match "pods" {
+        path_targets = discovery.relabel.pods.output
+      }
+
+      loki.source.file "pods" {
+        targets    = local.file_match.pods.targets
+        forward_to = [loki.process.pods.receiver]
+      }
+
+      // 4. Retire l'en-tête ajouté par containerd à chaque ligne (date, flux, marqueur).
+      loki.process "pods" {
+        stage.cri {}
+        forward_to = [loki.write.loki.receiver]
+      }
+
+      // 5. Envoi à Loki, sur la VM3.
+      loki.write "loki" {
+        endpoint {
+          url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }

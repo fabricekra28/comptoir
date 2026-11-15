@@ -1,0 +1,73 @@
+# Réglages de Loki pour le cluster k3s de Comptoir : une seule instance sur la VM3,
+# journaux stockés sur son disque, gardés 7 jours.
+
+deploymentMode: Monolithic
+
+loki:
+  # Une seule organisation : pas d'identifiant à fournir pour envoyer ou lire les journaux.
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2026-11-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  limits_config:
+    retention_period: 168h
+  # Le compacteur supprime les journaux de plus de 7 jours.
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
+
+singleBinary:
+  replicas: 1
+  # Conteneur annexe de chargement de règles : inutile ici.
+  sidecar: false
+  nodeSelector:
+    comptoir/role: observability
+  tolerations:
+    - key: comptoir/role
+      operator: Equal
+      value: observability
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 768Mi
+  extraEnv:
+    # Un peu sous le plafond de mémoire, pour que Loki libère sa mémoire avant d'être arrêté.
+    - name: GOMEMLIMIT
+      value: 650MiB
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: local-path
+
+# Les autres modes d'installation ne servent pas.
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+# Composants facultatifs, coûteux en mémoire pour un petit cluster.
+gateway:
+  enabled: false
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
