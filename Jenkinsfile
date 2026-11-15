@@ -438,19 +438,19 @@ pipeline {
                           --username "$DH_USER" \
                           --password-stdin
 
+                        # Seul le tag du build est publié : chaque image reste liée aux analyses de son build.
                         for svc in $SERVICES; do
                             LOCAL_IMAGE="${IMAGE_PREFIX}-${svc}:${BUILD_NUMBER}"
                             REMOTE_IMAGE="${DH_USER}/${IMAGE_PREFIX}-${svc}:${BUILD_NUMBER}"
-                            LATEST_IMAGE="${DH_USER}/${IMAGE_PREFIX}-${svc}:latest"
 
                             docker tag "$LOCAL_IMAGE" "$REMOTE_IMAGE"
-                            docker tag "$LOCAL_IMAGE" "$LATEST_IMAGE"
-
                             docker push "$REMOTE_IMAGE"
-                            docker push "$LATEST_IMAGE"
 
-                            echo "Image versionnée : $REMOTE_IMAGE"
-                            echo "Image latest : $LATEST_IMAGE"
+                            # Le tag latest n'est plus publié : on retire celui que d'anciens builds
+                            # ont laissé sur ce serveur (sans effet s'il n'existe pas).
+                            docker rmi "${DH_USER}/${IMAGE_PREFIX}-${svc}:latest" >/dev/null 2>&1 || true
+
+                            echo "Image publiée : $REMOTE_IMAGE"
                         done
 
                         echo "Publication Docker Hub terminée."
@@ -590,7 +590,7 @@ pipeline {
                                 <td style="border:1px solid #ddd;"><b>${svc}</b></td>
                                 <td style="border:1px solid #ddd;">
                                     <a href="https://hub.docker.com/r/${repo}">${repo}</a>
-                                    : ${env.BUILD_NUMBER} et latest
+                                    : tag ${env.BUILD_NUMBER}
                                 </td>
                             </tr>"""
                     }
