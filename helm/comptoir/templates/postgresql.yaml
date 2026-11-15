@@ -57,6 +57,10 @@ spec:
         fsGroup: 70
         seccompProfile:
           type: RuntimeDefault
+        {{- with .Values.postgresql.appArmorProfile }}
+        appArmorProfile:
+          type: {{ . }}
+        {{- end }}
       containers:
         - name: postgres
           image: {{ .Values.postgresql.image | quote }}

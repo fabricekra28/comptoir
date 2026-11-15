@@ -22,3 +22,10 @@ exposure:
 networkPolicy:
   # Sur k3s, Traefik tourne dans kube-system : lui seul peut joindre la gateway.
   gatewayControllerNamespace: kube-system
+
+postgresql:
+  # Sur Ubuntu 26.04, AppArmor refuse les signaux entre les processus d'un conteneur
+  # qui tourne sans droits root. PostgreSQL en a besoin pour démarrer et s'arrêter :
+  # son pod tourne donc sans profil AppArmor. Il garde ses autres protections
+  # (sans root, aucune capacité Linux, seccomp, système de fichiers en lecture seule).
+  appArmorProfile: Unconfined

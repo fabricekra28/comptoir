@@ -143,6 +143,9 @@ postgresql:
   enabled: true
   image: postgres:16-alpine
   user: comptoir
+  # Profil AppArmor du pod PostgreSQL. Vide : profil par défaut du cluster.
+  # « Unconfined » est nécessaire sur certains hôtes (voir values-k3s.yaml).
+  appArmorProfile: ""
   storage:
     size: 2Gi
     # Vide : classe de stockage par défaut du cluster.
