@@ -41,6 +41,35 @@ spec:
         namespaces:
           from: Same
     {{- end }}
+    {{- range $gw.extraHosts }}
+    - name: {{ printf "http-%s" .name }}
+      protocol: HTTP
+      port: {{ int $gw.httpPort }}
+      hostname: {{ .hostname | quote }}
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .namespace }}
+    {{- if $gw.tls.enabled }}
+    - name: {{ printf "https-%s" .name }}
+      protocol: HTTPS
+      port: {{ int $gw.httpsPort }}
+      hostname: {{ .hostname | quote }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: {{ .tlsSecretName }}
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .namespace }}
+    {{- end }}
+    {{- end }}
 ---
 {{- end }}
 apiVersion: gateway.networking.k8s.io/v1

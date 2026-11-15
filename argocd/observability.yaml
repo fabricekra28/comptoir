@@ -1,0 +1,22 @@
+# Point d'entrée de la supervision : Argo CD lit le dossier observability/argocd
+# et crée une application par outil. À appliquer une fois :
+#   kubectl apply -f argocd/observability.yaml
+# Ensuite, ajouter ou modifier un outil se fait par un simple git push.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/fabricekra28/comptoir.git
+    targetRevision: main
+    path: observability/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

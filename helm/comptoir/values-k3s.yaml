@@ -18,10 +18,18 @@ exposure:
       enabled: true
       # Certificat auto-signé créé à la main (voir README.md).
       secretName: comptoir-tls
+    # Grafana passe par le même Traefik : https://grafana.test:8443 depuis le Mac.
+    extraHosts:
+      - name: grafana
+        hostname: grafana.test
+        namespace: monitoring
+        tlsSecretName: grafana-tls
 
 networkPolicy:
   # Sur k3s, Traefik tourne dans kube-system : lui seul peut joindre la gateway.
   gatewayControllerNamespace: kube-system
+  # Prometheus (namespace monitoring) peut lire /metrics sur chaque service.
+  monitoringNamespace: monitoring
 
 postgresql:
   # Sur Ubuntu 26.04, AppArmor refuse les signaux entre les processus d'un conteneur

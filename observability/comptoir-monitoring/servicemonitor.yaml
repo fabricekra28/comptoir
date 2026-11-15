@@ -1,0 +1,18 @@
+# Prometheus lit /metrics sur les six services de la boutique, toutes les 30 secondes.
+# PostgreSQL n'a pas de port « http » : il n'est pas concerné.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: comptoir
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - comptoir
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: comptoir
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

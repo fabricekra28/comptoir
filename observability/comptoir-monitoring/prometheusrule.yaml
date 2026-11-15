@@ -1,0 +1,18 @@
+# L'alerte de la boutique : un service n'a plus aucun pod disponible depuis 2 minutes.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: comptoir
+  namespace: monitoring
+spec:
+  groups:
+    - name: comptoir
+      rules:
+        - alert: ComptoirServiceIndisponible
+          expr: kube_deployment_status_replicas_available{namespace="comptoir"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Le service {{ $labels.deployment }} de la boutique est indisponible"
+            description: "Aucun pod de {{ $labels.deployment }} n'est prêt depuis 2 minutes. Voir : kubectl -n comptoir get pods"

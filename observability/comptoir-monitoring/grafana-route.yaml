@@ -1,0 +1,39 @@
+# Grafana passe par le Gateway de la boutique (namespace comptoir), sur ses écoutes
+# https-grafana et http-grafana (voir extraHosts dans helm/comptoir/values-k3s.yaml).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: comptoir
+      namespace: comptoir
+      sectionName: https-grafana
+  hostnames:
+    - grafana.test
+  rules:
+    - backendRefs:
+        - name: grafana
+          port: 80
+---
+# Toute requête HTTP vers grafana.test est renvoyée vers HTTPS.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-https-redirect
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: comptoir
+      namespace: comptoir
+      sectionName: http-grafana
+  hostnames:
+    - grafana.test
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            port: 443
+            statusCode: 301

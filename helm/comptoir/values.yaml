@@ -124,6 +124,14 @@ exposure:
       secretName: comptoir-tls
       # ClusterIssuer cert-manager, ex. letsencrypt-prod. Vide : certificat fourni à la main.
       clusterIssuer: ""
+    # Autres sites servis par ce même Gateway (ex. Grafana). Chacun reçoit deux écoutes,
+    # http-<name> et https-<name>, auxquelles seules les routes de son namespace peuvent s'attacher.
+    # Son Secret TLS se trouve dans le namespace de la boutique, à côté du Gateway.
+    extraHosts: []
+    #  - name: grafana
+    #    hostname: grafana.test
+    #    namespace: monitoring
+    #    tlsSecretName: grafana-tls
 
 # ---------- Cloisonnement réseau ----------
 # Tout trafic est refusé par défaut ; seuls les échanges nécessaires sont ouverts.

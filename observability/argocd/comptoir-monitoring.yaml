@@ -1,0 +1,32 @@
+# Ce que la supervision sait de la boutique : quoi collecter, quand alerter, comment ouvrir Grafana.
+# Appliqué après kube-prometheus-stack, dont il utilise les définitions (ServiceMonitor, PrometheusRule).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: comptoir-monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/fabricekra28/comptoir.git
+    targetRevision: main
+    path: observability/comptoir-monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Au tout premier passage, les définitions de Prometheus peuvent ne pas exister encore.
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

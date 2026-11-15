@@ -1,0 +1,163 @@
+# Réglages de kube-prometheus-stack pour le cluster k3s de Comptoir.
+# Tout s'installe sur la VM3 (nœud vmobs), sauf l'agent de métriques système,
+# présent sur chaque nœud pour mesurer chaque machine.
+
+crds:
+  enabled: true
+
+# ---------- Composants intégrés à k3s ----------
+# k3s regroupe etcd, le scheduler, le controller-manager et kube-proxy dans un seul
+# programme : ils ne sont pas joignables séparément. Les surveiller produirait de
+# fausses alertes « composant en panne ».
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+defaultRules:
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeProxy: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+
+# ---------- Opérateur Prometheus ----------
+prometheusOperator:
+  nodeSelector:
+    comptoir/role: observability
+  tolerations:
+    - key: comptoir/role
+      operator: Equal
+      value: observability
+      effect: NoSchedule
+  admissionWebhooks:
+    patch:
+      nodeSelector:
+        comptoir/role: observability
+      tolerations:
+        - key: comptoir/role
+          operator: Equal
+          value: observability
+          effect: NoSchedule
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# ---------- Prometheus ----------
+prometheus:
+  prometheusSpec:
+    nodeSelector:
+      comptoir/role: observability
+    tolerations:
+      - key: comptoir/role
+        operator: Equal
+        value: observability
+        effect: NoSchedule
+    # Prend en compte toutes les règles et cibles du cluster, pas seulement celles du chart
+    # (dont celles de observability/comptoir-monitoring).
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    # Une semaine d'historique, et jamais plus de 8 Go sur le disque.
+    retention: 7d
+    retentionSize: 8GB
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 1536Mi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+# ---------- Alertmanager ----------
+# Sans destinataire configuré, l'alerte est visible dans Grafana (Alerting) et dans Alertmanager.
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      comptoir/role: observability
+    tolerations:
+      - key: comptoir/role
+        operator: Equal
+        value: observability
+        effect: NoSchedule
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+# ---------- Grafana ----------
+grafana:
+  fullnameOverride: grafana
+  nodeSelector:
+    comptoir/role: observability
+  tolerations:
+    - key: comptoir/role
+      operator: Equal
+      value: observability
+      effect: NoSchedule
+  # Identifiants de l'administrateur : Secret créé à la main (voir le document d'observabilité).
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    size: 2Gi
+  service:
+    port: 80
+  grafana.ini:
+    server:
+      root_url: https://grafana.test:8443
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# ---------- kube-state-metrics ----------
+kube-state-metrics:
+  nodeSelector:
+    comptoir/role: observability
+  tolerations:
+    - key: comptoir/role
+      operator: Equal
+      value: observability
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 192Mi
+
+# ---------- Agent de métriques système ----------
+# Sur chaque nœud, y compris VmCD : il tolère toutes les restrictions.
+prometheus-node-exporter:
+  tolerations:
+    - operator: Exists
+  resources:
+    requests:
+      cpu: 10m
+      memory: 24Mi
+    limits:
+      memory: 64Mi
