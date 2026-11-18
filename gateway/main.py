@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from backend import ApiError, Backend, ServiceDown
+from tracing import setup_tracing
 
 
 def _required(name: str) -> str:
@@ -87,6 +88,8 @@ try:
     Instrumentator().instrument(app).expose(app, include_in_schema=False)
 except ImportError:
     pass
+
+setup_tracing(app, "gateway")
 
 
 # ---------- Filtres d'affichage ----------

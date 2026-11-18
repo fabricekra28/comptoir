@@ -89,6 +89,13 @@ spec:
                   key: ADMIN_PASSWORD
                   optional: true
             {{- end }}
+            {{- if $.Values.tracing.enabled }}
+            # Traces OpenTelemetry vers Jaeger, au nom du service.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ required "tracing.endpoint est obligatoire quand tracing.enabled vaut true" $.Values.tracing.endpoint | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ $name | quote }}
+            {{- end }}
           # Laisse jusqu'à 2 min 30 au démarrage (le service patiente si sa base n'est pas prête).
           startupProbe:
             httpGet:

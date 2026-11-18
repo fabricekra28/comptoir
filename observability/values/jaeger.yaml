@@ -1,0 +1,59 @@
+# Réglages de Jaeger (version 2) pour le cluster k3s de Comptoir : une seule instance sur
+# la VM3, traces gardées en mémoire. Elles sont perdues au redémarrage de Jaeger, ce qui
+# suffit pour suivre le parcours des requêtes récentes.
+
+jaeger:
+  nodeSelector:
+    comptoir/role: observability
+  tolerations:
+    - key: comptoir/role
+      operator: Equal
+      value: observability
+      effect: NoSchedule
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# Configuration de Jaeger : réception OTLP (4317 en gRPC, 4318 en HTTP), stockage en mémoire
+# limité à 20 000 traces, consultation sur le port 16686, santé sur le port 13133.
+userconfig:
+  service:
+    extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [jaeger_storage_exporter]
+    telemetry:
+      resource:
+        service.name: jaeger
+      logs:
+        level: info
+  extensions:
+    healthcheckv2:
+      use_v2: true
+      http:
+        endpoint: 0.0.0.0:13133
+    jaeger_query:
+      storage:
+        traces: memstore
+    jaeger_storage:
+      backends:
+        memstore:
+          memory:
+            max_traces: 20000
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  processors:
+    batch: {}
+  exporters:
+    jaeger_storage_exporter:
+      trace_storage: memstore

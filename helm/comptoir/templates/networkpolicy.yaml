@@ -83,6 +83,16 @@ spec:
               kubernetes.io/metadata.name: {{ $np.monitoringNamespace }}
     {{- end }}
   egress:
+    {{- if $.Values.tracing.enabled }}
+    # Envoi des traces à Jaeger.
+    - ports:
+        - protocol: TCP
+          port: {{ int $.Values.tracing.port }}
+      to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $.Values.tracing.namespace }}
+    {{- end }}
     {{- if eq $name "gateway" }}
     {{- range $target, $t := $.Values.services }}
     {{- if ne $target "gateway" }}

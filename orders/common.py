@@ -102,7 +102,9 @@ def internal_only(x_internal_token: str | None = Header(default=None)) -> None:
 
 
 def install_common(app: FastAPI, name: str) -> None:
-    """Ajoute /live (processus vivant), /health (base joignable) et /metrics."""
+    """Ajoute /live (processus vivant), /health (base joignable), /metrics, et les traces."""
+    from tracing import setup_tracing
+    setup_tracing(app, name, engine)
 
     @app.get("/live", include_in_schema=False)
     def live():

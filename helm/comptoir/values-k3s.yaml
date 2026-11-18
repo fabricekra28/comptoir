@@ -37,3 +37,8 @@ postgresql:
   # son pod tourne donc sans profil AppArmor. Il garde ses autres protections
   # (sans root, aucune capacité Linux, seccomp, système de fichiers en lecture seule).
   appArmorProfile: Unconfined
+
+tracing:
+  # Jaeger tourne sur la VM3, dans le namespace monitoring.
+  enabled: true
+  endpoint: http://jaeger.monitoring.svc.cluster.local:4318

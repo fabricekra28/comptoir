@@ -134,6 +134,12 @@ grafana:
       uid: loki
       access: proxy
       url: http://loki.monitoring.svc.cluster.local:3100
+    # Jaeger, pour consulter les traces dans Grafana (menu Explore, source Jaeger).
+    - name: Jaeger
+      type: jaeger
+      uid: jaeger
+      access: proxy
+      url: http://jaeger.monitoring.svc.cluster.local:16686
   resources:
     requests:
       cpu: 100m

@@ -145,6 +145,17 @@ networkPolicy:
   # Plage d'adresses de la base externe (utile seulement si postgresql.enabled vaut false).
   externalDatabaseCidr: 0.0.0.0/0
 
+# ---------- Traces ----------
+# Les services envoient leurs traces à Jaeger (protocole OTLP sur HTTP). Si Jaeger est
+# injoignable, les traces sont perdues mais les services continuent normalement.
+tracing:
+  enabled: false
+  # Adresse de Jaeger, ex. http://jaeger.monitoring.svc.cluster.local:4318
+  endpoint: ""
+  # Namespace et port de Jaeger : les règles réseau n'autorisent l'envoi que vers eux.
+  namespace: monitoring
+  port: 4318
+
 # ---------- Base de données ----------
 postgresql:
   # true : la chart déploie PostgreSQL. false : elle utilise externalDatabase.

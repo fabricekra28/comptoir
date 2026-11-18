@@ -1,0 +1,30 @@
+# Jaeger : reçoit les traces des six services et les affiche dans Grafana (source Jaeger).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jaeger
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    - repoURL: https://jaegertracing.github.io/helm-charts
+      chart: jaeger
+      targetRevision: 4.16.1
+      helm:
+        releaseName: jaeger
+        valueFiles:
+          - $values/observability/values/jaeger.yaml
+    - repoURL: https://github.com/fabricekra28/comptoir.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
