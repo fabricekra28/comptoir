@@ -1,0 +1,32 @@
+# Falco : sur chaque nœud, surveille ce que font les conteneurs (shell ouvert dans un pod,
+# fichier sensible lu, programme inattendu) et signale ce qui sort de l'ordinaire.
+# Ses alertes sont écrites dans ses journaux, qu'Alloy envoie à Loki : on les lit dans Grafana.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falco
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    - repoURL: https://falcosecurity.github.io/charts
+      chart: falco
+      targetRevision: 9.2.2
+      helm:
+        releaseName: falco
+        valueFiles:
+          - $values/observability/values/falco.yaml
+    - repoURL: https://github.com/fabricekra28/comptoir.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: falco
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

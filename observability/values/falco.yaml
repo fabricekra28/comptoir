@@ -1,0 +1,34 @@
+# Réglages de Falco pour le cluster k3s de Comptoir : un exemplaire par nœud.
+
+# Observe le noyau avec eBPF moderne : rien à compiler ni à télécharger pour le noyau,
+# ce qui convient à un noyau très récent comme le 7.0 d'Ubuntu 26.04.
+driver:
+  kind: modern_ebpf
+
+# Tourne sur les deux nœuds, malgré la restriction de la VM3.
+tolerations:
+  - operator: Exists
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+# Les règles officielles sont téléchargées au démarrage. Le suivi de leurs mises à jour
+# (un conteneur de plus par nœud) est désactivé pour économiser la mémoire.
+falcoctl:
+  artifact:
+    install:
+      enabled: true
+    follow:
+      enabled: false
+
+falco:
+  # Une alerte par ligne, au format JSON : Loki et Grafana peuvent en lire chaque champ.
+  json_output: true
+  json_include_output_property: true
+  json_include_tags_property: true
+  # Seulement les alertes de niveau « notice » et au-dessus, pour éviter le bruit.
+  priority: notice
