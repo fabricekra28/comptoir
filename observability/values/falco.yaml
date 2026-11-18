@@ -9,12 +9,15 @@ driver:
 tolerations:
   - operator: Exists
 
+# Plafond à 1 Gi, comme le chart par défaut : au démarrage, le noyau compte dans la mémoire
+# de Falco le chargement de sa sonde eBPF. Avec 512 Mi, Falco était arrêté à ce moment-là
+# (OOMKilled). Réservé : 128 Mi seulement, sa consommation habituelle restant faible.
 resources:
   requests:
     cpu: 100m
     memory: 128Mi
   limits:
-    memory: 512Mi
+    memory: 1024Mi
 
 # Les règles officielles sont téléchargées au démarrage. Le suivi de leurs mises à jour
 # (un conteneur de plus par nœud) est désactivé pour économiser la mémoire.
