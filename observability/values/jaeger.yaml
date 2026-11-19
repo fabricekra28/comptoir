@@ -3,6 +3,8 @@
 # suffit pour suivre le parcours des requêtes récentes.
 
 jaeger:
+  image:
+    tag: "2.20.0"
   nodeSelector:
     comptoir/role: observability
   tolerations:
