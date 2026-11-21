@@ -1,4 +1,4 @@
 # Version des images déployée par Argo CD.
 # Fichier réécrit par Jenkins à chaque déploiement (étape 13) : ne pas le modifier à la main.
 image:
-  tag: 6
+  tag: 7
