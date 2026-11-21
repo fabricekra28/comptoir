@@ -17,4 +17,4 @@ EXPOSE 8001
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/live', timeout=2)"
 
-CMD ["/app/start.sh", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["/app/start.sh", "python", "serve.py", "main:app", "--host", "0.0.0.0", "--port", "8001"]
